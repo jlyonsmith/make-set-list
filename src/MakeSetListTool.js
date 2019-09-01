@@ -4,6 +4,7 @@ import * as version from "./version"
 import fs from "fs-extra"
 import readdirp from "readdirp"
 import { exec } from "promisify-child-process"
+import path from "path"
 
 const pipeToPromise = (readable, writeable) => {
   const promise = new Promise((resolve, reject) => {
@@ -32,8 +33,8 @@ export class MakeSetListTool {
   async run(argv) {
     const options = {
       boolean: ["debug", "help", "version"],
-      string: [],
-      alias: {},
+      string: ["output"],
+      alias: { o: "output" },
     }
 
     const args = parseArgs(argv, options)
@@ -51,11 +52,13 @@ Usage: ${this.toolName} [options] <song-list-file> <pdf-root-dir>
 
 Description:
 
-Creates a set list from a collection of PDF files store in sub-directories.
+Creates a set list from a collection of PDF files storeh in sub-directories.
 
 Options:
-  --help                        Shows this help.
-  --version                     Shows the tool version.
+  --help                    Shows this help.
+  --version                 Shows the tool version.
+  --debug                   Output debug information.
+  --output, -o <file>       Output file name.
 `)
       return 0
     }
@@ -82,7 +85,9 @@ Options:
     const entries = await readdirp.promise(pdfRootPath, {
       fileFilter: Array.from(songMap.keys()),
     })
-    const outputPath = "song-list.pdf"
+    const outputPath =
+      args.output ||
+      path.basename(songListPath, path.extname(songListPath)) + ".pdf"
 
     for (const entry of entries) {
       const files = songMap.get(entry.basename)
@@ -108,14 +113,15 @@ Options:
     const command = `pdf-o-rama concat -o ${outputPath} ${Array.from(
       songMap.values()
     )
-      .filter((files) => `"${files[0]}"`)
+      .filter((files) => files.length > 0)
+      .map((files) => `"${files[0]}"`)
       .join(" ")}`
 
     if (this.debug) {
       this.log.info(command)
     }
 
-    this.log.info(`Combining ${outputPath} PDF's...`)
+    this.log.info(`Combining PDF's into ${outputPath}...`)
 
     try {
       await exec(command)
