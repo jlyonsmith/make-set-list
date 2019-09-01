@@ -17,6 +17,8 @@ var _readdirp = _interopRequireDefault(require("readdirp"));
 
 var _promisifyChildProcess = require("promisify-child-process");
 
+var _path = _interopRequireDefault(require("path"));
+
 var _class;
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
@@ -49,8 +51,10 @@ let MakeSetListTool = (0, _autobindDecorator.default)(_class = class MakeSetList
   async run(argv) {
     const options = {
       boolean: ["debug", "help", "version"],
-      string: [],
-      alias: {}
+      string: ["output"],
+      alias: {
+        o: "output"
+      }
     };
     const args = (0, _minimist.default)(argv, options);
     this.debug = !!args.debug;
@@ -66,11 +70,13 @@ Usage: ${this.toolName} [options] <song-list-file> <pdf-root-dir>
 
 Description:
 
-Creates a set list from a collection of PDF files store in sub-directories.
+Creates a set list from a collection of PDF files storeh in sub-directories.
 
 Options:
-  --help                        Shows this help.
-  --version                     Shows the tool version.
+  --help                    Shows this help.
+  --version                 Shows the tool version.
+  --debug                   Output debug information.
+  --output, -o <file>       Output file name.
 `);
       return 0;
     }
@@ -99,7 +105,7 @@ Options:
     const entries = await _readdirp.default.promise(pdfRootPath, {
       fileFilter: Array.from(songMap.keys())
     });
-    const outputPath = "song-list.pdf";
+    const outputPath = args.output || _path.default.basename(songListPath, _path.default.extname(songListPath)) + ".pdf";
 
     for (const entry of entries) {
       const files = songMap.get(entry.basename);
@@ -119,13 +125,13 @@ Options:
       }
     }
 
-    const command = `pdf-o-rama concat -o ${outputPath} ${Array.from(songMap.values()).filter(files => `"${files[0]}"`).join(" ")}`;
+    const command = `pdf-o-rama concat -o ${outputPath} ${Array.from(songMap.values()).filter(files => files.length > 0).map(files => `"${files[0]}"`).join(" ")}`;
 
     if (this.debug) {
       this.log.info(command);
     }
 
-    this.log.info(`Combining ${outputPath} PDF's...`);
+    this.log.info(`Combining PDF's into ${outputPath}...`);
 
     try {
       await (0, _promisifyChildProcess.exec)(command);

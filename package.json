@@ -1,6 +1,6 @@
 {
   "name": "@johnls/make-set-list",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A tool for making music set lists",
   "bin": {
     "make-set-list": "dist/make-set-list.js"
